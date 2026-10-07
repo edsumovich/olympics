@@ -27,9 +27,11 @@
      10. ADMIN_PASSWORD = the password for the "Admin Area" link at the
          bottom of the homepage, which opens a form to compose a story
          (headline, author, cover photo, body) right from the browser.
-         Published stories show up immediately but only for that browsing
-         session — they reset on reload, since this is a static file with
-         no server to save to.
+     11. SUPABASE SETUP (near the top of the <script> below) = fill this in
+         to make publishing shared across every visitor/device instead of
+         just the browser that published it. Full instructions are there.
+         Until it's filled in, published stories only save to that one
+         browser.
      Save the file and re-open it in a browser. That's it.
      ============================================================ */
 
@@ -1055,8 +1057,8 @@
       <button class="admin-btn ghost" onclick="closeAdminOverlays()">Cancel</button>
       <button class="admin-btn primary" onclick="submitAdminStory()">Publish Story</button>
     </div>
-    <div class="admin-note">Published stories are saved in this browser and will still be here next time you open the site on this device. They won't appear for visitors using a different browser or computer, since this is a static site with no shared server behind it.</div>
-    <div class="admin-note" style="margin-top:10px;"><span style="text-decoration:underline;cursor:pointer;" onclick="clearSavedAdminStories()">Clear all locally saved stories</span> (undo everything published from this browser)</div>
+    <div class="admin-note" id="admin-persistence-note"></div>
+    <div class="admin-note" style="margin-top:10px;"><span style="text-decoration:underline;cursor:pointer;" onclick="clearSavedAdminStories()">Clear all locally saved stories</span> (undo everything published from this browser — only affects this device's local fallback, not the shared backend)</div>
   </div>
 </div>
 
@@ -1377,7 +1379,7 @@
         <button type="button" class="admin-btn ghost" onclick="previewSubmitArticle()">Preview</button>
         <button type="button" class="admin-btn primary" onclick="publishSubmitArticle()">Publish</button>
       </div>
-      <div class="admin-note">Published articles appear immediately on the homepage and are saved in this browser, so they'll still be here next time you open the site on this device. They won't appear for visitors using a different browser or computer, since this is a static site with no shared server behind it.</div>
+      <div class="admin-note" id="submit-persistence-note"></div>
     </div>
     <div style="text-align:center;margin-top:34px;">
       <span class="back-link" onclick="showPage('home-view')">&larr; Back to Red Hat League</span>
@@ -1391,7 +1393,79 @@
   </div>
 </footer>
 
+<!-- Supabase JS client — used for shared, cross-device story publishing.
+     See the SUPABASE SETUP block near the top of the script below. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+/* ============================================================
+   SUPABASE SETUP — shared, cross-device story publishing.
+   -------------------------------------------------------------
+   Without this, stories published through the Admin Area are only
+   saved on the browser that published them (localStorage). Filling
+   this in makes publishing genuinely shared: anyone visiting the
+   site, on any device, sees new stories.
+
+   HOW TO SET THIS UP (about 5 minutes):
+   1. Go to supabase.com, sign in, and create a new project (free tier
+      is plenty for this).
+   2. In your project, open the SQL Editor and run this once:
+
+        create table stories (
+          id text primary key,
+          title text not null,
+          author text not null,
+          category text not null default 'General',
+          dek text default '',
+          week text default '',
+          date text default '',
+          published_at date default current_date,
+          accent text default '',
+          image text,
+          body jsonb not null default '[]'::jsonb,
+          featured boolean not null default false,
+          created_at timestamptz not null default now()
+        );
+
+        alter table stories enable row level security;
+
+        create policy "Public can read stories"
+          on stories for select
+          using (true);
+
+        create policy "Public can insert stories"
+          on stories for insert
+          with check (true);
+
+        create policy "Public can delete stories"
+          on stories for delete
+          using (true);
+
+      (Read/insert/delete are left open to any visitor on purpose —
+      this site's publish and delete actions are already gated by
+      the plain passwords below in the code, same as everywhere else
+      on this site. Nothing here is meant to be bank-grade security.)
+
+   3. In your Supabase project, go to Settings → API. Copy the
+      "Project URL" and the "anon public" key into the two constants
+      directly below.
+   4. Save this file and reload it. That's it — publishing and
+      deleting will now go through Supabase instead of just this
+      browser's storage.
+
+   Until you fill these in, the site automatically falls back to
+   saving stories only in this browser (the old behavior), so nothing
+   breaks in the meantime.
+   ============================================================ */
+const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLIC_KEY";
+
+const supabaseClient = (
+  typeof window.supabase !== 'undefined' &&
+  SUPABASE_URL.indexOf('YOUR_SUPABASE') === -1 &&
+  SUPABASE_ANON_KEY.indexOf('YOUR_SUPABASE') === -1
+) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
 /* ============================================================
    EDIT ZONE — everything below is the data that drives the site.
    Change these arrays, save the file, refresh the page.
@@ -2297,11 +2371,45 @@ function previewAdminPhoto(evt){
   reader.readAsDataURL(file);
 }
 
-// Stories added through the Admin Area are saved to this browser's
-// localStorage so they survive page reloads. They are NOT shared with
-// other visitors' browsers — there's no server behind this static file,
-// so persistence here is per-device, not site-wide.
+/* ============================================================
+   Shared story storage — Supabase when configured above, otherwise
+   this browser's localStorage only (see the SUPABASE SETUP block).
+   ============================================================ */
 const ADMIN_STORAGE_KEY = 'rhl_admin_stories';
+
+function storyToRow(story){
+  return {
+    id: story.id,
+    title: story.title,
+    author: story.author,
+    category: story.category,
+    dek: story.dek || '',
+    week: story.week || '',
+    date: story.date || '',
+    published_at: story.publishedAt || null,
+    accent: story.accent || '',
+    image: story.image || null,
+    body: story.body,
+    featured: !!story.featured
+  };
+}
+
+function rowToStory(row){
+  return {
+    id: row.id,
+    featured: !!row.featured,
+    category: row.category,
+    title: row.title,
+    dek: row.dek || '',
+    week: row.week || '',
+    author: row.author,
+    date: row.date || '',
+    publishedAt: row.published_at || null,
+    accent: row.accent || '',
+    image: row.image || undefined,
+    body: row.body || []
+  };
+}
 
 function loadAdminStoriesFromStorage(){
   try{
@@ -2316,7 +2424,7 @@ function loadAdminStoriesFromStorage(){
   }
 }
 
-function saveAdminStoryToStorage(story){
+function saveAdminStoryToLocalStorage(story){
   try{
     const saved = loadAdminStoriesFromStorage();
     saved.unshift(story);
@@ -2328,8 +2436,43 @@ function saveAdminStoryToStorage(story){
   }
 }
 
-function applySavedAdminStories(){
-  const saved = loadAdminStoriesFromStorage();
+// Saves a story to Supabase if it's configured, otherwise falls back to
+// this browser's localStorage. Returns a warning string on failure, or
+// null on success (same contract either way).
+async function saveAdminStoryToStorage(story){
+  if(supabaseClient){
+    try{
+      const { error } = await supabaseClient.from('stories').insert(storyToRow(story));
+      if(error) throw error;
+      return null;
+    } catch(err){
+      console.warn('Could not save story to Supabase:', err);
+      return "This story is showing on the page now, but couldn't be saved to the shared backend (" + (err.message || 'unknown error') + "). It will disappear if you reload the page.";
+    }
+  }
+  return saveAdminStoryToLocalStorage(story);
+}
+
+// Loads previously published stories (from Supabase if configured,
+// otherwise this browser's localStorage) and merges them into STORIES,
+// newest first, with the most recent becoming the featured/top story.
+async function applySavedAdminStories(){
+  let saved = [];
+  if(supabaseClient){
+    try{
+      const { data, error } = await supabaseClient
+        .from('stories')
+        .select('*')
+        .order('created_at', { ascending:false });
+      if(error) throw error;
+      saved = (data || []).map(rowToStory);
+    } catch(err){
+      console.warn('Could not load shared stories from Supabase:', err);
+      saved = [];
+    }
+  } else {
+    saved = loadAdminStoriesFromStorage();
+  }
   if(!saved.length) return;
   // saved[0] is the most recently published — unshift from oldest to newest
   // so the newest ends up at the very front (index 0).
@@ -2339,6 +2482,24 @@ function applySavedAdminStories(){
   // Whichever story is now at the front becomes the featured/top story.
   STORIES.forEach(s=>{ s.featured = false; });
   STORIES[0].featured = true;
+}
+
+async function deleteStoryFromStorage(id){
+  if(supabaseClient){
+    try{
+      const { error } = await supabaseClient.from('stories').delete().eq('id', id);
+      if(error) throw error;
+    } catch(err){
+      console.warn('Could not delete story from Supabase:', err);
+    }
+    return;
+  }
+  try{
+    const saved = loadAdminStoriesFromStorage().filter(s=>s.id!==id);
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(saved));
+  } catch(err){
+    console.warn('Could not update saved stories after delete:', err);
+  }
 }
 
 function clearSavedAdminStories(){
@@ -2359,7 +2520,7 @@ function publishNewStory(story){
   STORIES.unshift(story);
 }
 
-function submitAdminStory(){
+async function submitAdminStory(){
   const title = document.getElementById('admin-field-title').value.trim();
   const author = document.getElementById('admin-field-author').value.trim();
   const bodyRaw = document.getElementById('admin-field-body').value.trim();
@@ -2395,11 +2556,11 @@ function submitAdminStory(){
   }
 
   publishNewStory(newStory);
-  const saveWarning = saveAdminStoryToStorage(newStory);
   renderStories();
   renderHero();
   renderStoriesArchive();
   closeAdminOverlays();
+  const saveWarning = await saveAdminStoryToStorage(newStory);
   showPage('home-view');
   requestAnimationFrame(()=>{
     const el = document.getElementById('stories');
@@ -2413,7 +2574,8 @@ function submitAdminStory(){
 /* ============================================================
    SUBMIT AN ARTICLE — a public page (no password) using the same
    fields as the Admin Area composer, with a Preview step before
-   publishing. Uses the same localStorage persistence, so articles
+   publishing. Uses the same shared storage (Supabase if configured,
+   otherwise localStorage) as the Admin Area, so articles
    published here stick around on this browser too.
    ============================================================ */
 let submitPhotoDataUrl = null;
@@ -2496,7 +2658,7 @@ const CATEGORY_AUTHOR_RESTRICTIONS = {
   "Grind my Gears": "Walter Bitterman"
 };
 
-function publishSubmitArticle(){
+async function publishSubmitArticle(){
   // Snapshot everything the user has typed before doing any validation, so
   // we can guarantee it's still there if we have to block the publish.
   const fieldSnapshot = {
@@ -2538,7 +2700,6 @@ function publishSubmitArticle(){
 
   story.author = escapeHtml(story.author);
   publishNewStory(story);
-  const saveWarning = saveAdminStoryToStorage(story);
   renderStories();
   renderHero();
   renderStoriesArchive();
@@ -2547,6 +2708,7 @@ function publishSubmitArticle(){
     const el = document.getElementById('stories');
     if(el) el.scrollIntoView({behavior:'smooth'});
   });
+  const saveWarning = await saveAdminStoryToStorage(story);
   if(saveWarning){
     setTimeout(()=>alert(saveWarning), 300);
   }
@@ -2631,7 +2793,7 @@ function previewArticle(s){
 
 const DELETE_STORY_PASSWORD = "admin123";
 
-function deleteCurrentArticle(){
+async function deleteCurrentArticle(){
   if(!currentArticleId) return;
   const story = STORIES.find(x=>x.id===currentArticleId);
   if(!story) return;
@@ -2645,16 +2807,8 @@ function deleteCurrentArticle(){
   if(!confirm(`Delete "${story.title}"? This cannot be undone.`)) return;
 
   const wasFeatured = !!story.featured;
+  const deletedId = currentArticleId;
   STORIES.splice(STORIES.indexOf(story), 1);
-
-  // If it was saved from the Admin Area or Submit an Article, remove it
-  // from this browser's storage too so it doesn't come back on reload.
-  try{
-    const saved = loadAdminStoriesFromStorage().filter(s=>s.id!==currentArticleId);
-    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(saved));
-  } catch(err){
-    console.warn('Could not update saved stories after delete:', err);
-  }
 
   if(wasFeatured && STORIES.length){
     STORIES[0].featured = true;
@@ -2665,6 +2819,11 @@ function deleteCurrentArticle(){
   renderStories();
   renderStoriesArchive();
   showPage('home-view');
+
+  // Remove it from shared storage (Supabase) or this browser's storage too,
+  // so it doesn't come back on reload. Harmless no-op for built-in stories
+  // that were never saved there in the first place.
+  await deleteStoryFromStorage(deletedId);
 }
 
 function showPage(id){
@@ -2709,22 +2868,43 @@ function goHomeAnchor(anchorId){
   }
 }
 
-applySavedAdminStories();
+function setPersistenceNotes(){
+  const sharedMsg = "Published stories are saved to the shared database and will show up for every visitor, on any device.";
+  const localMsg = "Published stories are only saved in this browser (no shared backend is configured yet — see the SUPABASE SETUP instructions near the top of this file). They'll still be here next time you open the site on this device, but won't appear for other visitors.";
+  const msg = supabaseClient ? sharedMsg : localMsg;
+  const a = document.getElementById('admin-persistence-note');
+  const b = document.getElementById('submit-persistence-note');
+  if(a) a.textContent = msg;
+  if(b) b.textContent = msg;
+}
+
+setPersistenceNotes();
 renderTicker();
-renderHero();
 renderStandings();
 renderChampionsStandings();
 renderChampionsLeagueHistory();
 renderChampionsLeagueLeaderboard();
 renderAxeSchedule();
-renderStories();
-renderStoriesArchive();
-populateSubmitAuthorDropdown();
-populateSubmitCategoryDropdown();
 renderHistory();
 renderAllTime();
 renderShamePhotos();
 renderAds();
+populateSubmitCategoryDropdown();
+
+// Render story-dependent UI immediately with the built-in stories, so the
+// page isn't blank while shared stories (Supabase or localStorage) load.
+renderHero();
+renderStories();
+renderStoriesArchive();
+populateSubmitAuthorDropdown();
+
+// Then load any shared/published stories and re-render once they're in.
+applySavedAdminStories().then(()=>{
+  renderHero();
+  renderStories();
+  renderStoriesArchive();
+  populateSubmitAuthorDropdown();
+});
 </script>
 
 </body>
