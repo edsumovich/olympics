@@ -978,6 +978,7 @@
       <a class="gold" onclick="closeNavMenu();showPage('history-view')">History</a>
       <a class="gold" onclick="closeNavMenu();showPage('shame-view')">Hall of Shame</a>
       <a class="gold" onclick="closeNavMenu();showPage('charter-view')">League Charter</a>
+      <a class="gold" onclick="closeNavMenu();showPage('submit-view')">Submit an Article</a>
     </nav>
   </div>
 </div>
@@ -1457,8 +1458,8 @@
    saving stories only in this browser (the old behavior), so nothing
    breaks in the meantime.
    ============================================================ */
-const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLIC_KEY";
+const SUPABASE_URL = "https://nlgnnbwakivoesawjshh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sZ25uYndha2l2b2VzYXdqc2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MTI3NzEsImV4cCI6MjEwNjk4ODc3MX0.-JIROJdLg_gvJmuqOVDa55TWvt4iNbREDv-cxpPJj7c";
 
 const supabaseClient = (
   typeof window.supabase !== 'undefined' &&
@@ -2655,7 +2656,8 @@ const SUBMIT_PUBLISH_PASSWORD = "Beavers";
 // add more entries here any time a category should be author-locked.
 const CATEGORY_AUTHOR_RESTRICTIONS = {
   "Wanker of the Week": "Alistair Farrar-Milliner",
-  "Grind my Gears": "Walter Bitterman"
+  "Grind my Gears": "Walter Bitterman",
+  "Weekly Recap": "The Commissioner"
 };
 
 async function publishSubmitArticle(){
