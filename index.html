@@ -1995,13 +1995,29 @@ function renderTicker(){
 
 function renderHero(){
   const feature = STORIES.find(s=>s.featured) || STORIES[0];
+  const heroSection = document.getElementById('home');
   if(!feature){document.getElementById('hero-content').innerHTML = '<p style="color:#fff">Add a story to STORIES to populate the homepage.</p>'; return;}
   const dekHtml = feature.dek ? `<p class="dek">${feature.dek}</p>` : '';
+  // Use the featured story's own cover photo as the banner when it has one,
+  // instead of always showing the plain color backdrop.
+  if(feature.image){
+    const fit = feature.imageFit === 'contain' ? 'contain' : 'cover';
+    heroSection.style.backgroundImage =
+      `linear-gradient(180deg, rgba(46,23,53,0.55), rgba(46,23,53,0.88)), url('${feature.image}')`;
+    heroSection.style.backgroundSize = `cover, ${fit}`;
+    heroSection.style.backgroundPosition = 'center, center';
+    heroSection.style.backgroundRepeat = 'no-repeat, no-repeat';
+  } else {
+    heroSection.style.backgroundImage = '';
+    heroSection.style.backgroundSize = '';
+    heroSection.style.backgroundPosition = '';
+    heroSection.style.backgroundRepeat = '';
+  }
   document.getElementById('hero-content').innerHTML = `
     <div class="hero-kicker">${feature.category}</div>
     <h2>${feature.title}</h2>
     ${dekHtml}
-    <div class="hero-meta">${feature.week} &nbsp;·&nbsp; BY ${feature.author.toUpperCase()}</div>
+    <div class="hero-meta">BY ${feature.author.toUpperCase()}</div>
     <button class="hero-read" onclick="openArticle('${feature.id}')">Read the Dispatch</button>
   `;
 }
@@ -2162,22 +2178,33 @@ function renderAxeSchedule(){
   `).join('');
 }
 
+// Formats a story's publishedAt (YYYY-MM-DD) into a readable date like
+// "October 3, 2026". Falls back to the story's own "date" text only if
+// publishedAt is missing or unparseable.
+function formatStoryDate(s){
+  if(s.publishedAt){
+    const d = new Date(s.publishedAt + 'T00:00:00');
+    if(!isNaN(d)){
+      return d.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+    }
+  }
+  return s.date || '';
+}
+
 function storyCardHTML(s){
   const fit = s.imageFit || 'cover';
-  const thumbStyle = s.image
-    ? `background-image:url('${s.image}');background-size:${fit};background-position:center;background-repeat:no-repeat;${fit==='contain' ? 'background-color:#0b0b0f;' : ''}`
-    : `background:${s.accent};`;
+  const thumbHtml = s.image
+    ? `<div class="story-thumb" style="background-image:url('${s.image}');background-size:${fit};background-position:center;background-repeat:no-repeat;${fit==='contain' ? 'background-color:#0b0b0f;' : ''}"></div>`
+    : '';
   const dekHtml = s.dek ? `<p class="story-dek">${s.dek}</p>` : '';
   return `
     <div class="story-card ${s.featured?'featured':''}" onclick="openArticle('${s.id}')">
-      <div class="story-thumb" style="${thumbStyle}">
-        <span class="wk">${s.week}</span>
-      </div>
+      ${thumbHtml}
       <div class="story-body">
         <span class="story-cat">${s.category}</span>
         <h4>${s.title}</h4>
         ${dekHtml}
-        <div class="story-byline">BY ${s.author.toUpperCase()} &nbsp;·&nbsp; ${s.date}</div>
+        <div class="story-byline">BY ${s.author.toUpperCase()} &nbsp;·&nbsp; ${formatStoryDate(s)}</div>
       </div>
     </div>`;
 }
@@ -2757,7 +2784,7 @@ function populateSubmitCategoryDropdown(){
 function renderArticleContent(s){
   document.getElementById('art-cat').textContent = s.category;
   document.getElementById('art-title').textContent = s.title;
-  document.getElementById('art-byline').textContent = `BY ${(s.author||'').toUpperCase()} · ${s.week} · ${s.date}`;
+  document.getElementById('art-byline').textContent = `BY ${(s.author||'').toUpperCase()} · ${formatStoryDate(s)}`;
   document.getElementById('art-bar').style.background = s.accent;
   const coverImageHtml = s.image ? `<img class="article-image" src="${s.image}" alt="${s.title}">` : '';
   // Each body item is either a paragraph string, or an inline image object
