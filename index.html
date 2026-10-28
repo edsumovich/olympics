@@ -1575,25 +1575,25 @@ const supabaseClient = (
 // "streak" like "W3" or "L2".
 // "badge" is optional: "suit" (purple suit-jacket icon), "trophy" (red hat on a tilted football), or "chain" (gold chain necklace) — or omit/null for none.
 const TEAMS = [
-  { name:"Kaiser's Sozes",                     manager:"Andrew K",      wins:5, losses:1, ties:0, pf:704.98, pa:578.78, streak:"W2", badge:"trophy" },
-  { name:"Flavor of Love 2",                   manager:"Badgerlauncher",wins:4, losses:2, ties:0, pf:672.46, pa:666.48, streak:"W1", badge:null },
-  { name:"Rice-A-Romey",                       manager:"Bryan",         wins:4, losses:2, ties:0, pf:616.04, pa:615.46, streak:"W1", badge:null },
-  { name:"Andrew's Ludicrous Team",            manager:"Andrew Balk",   wins:3, losses:3, ties:0, pf:661.82, pa:650.18, streak:"L1", badge:"chain" },
-  { name:"Jim Mora",                           manager:"Levi",          wins:3, losses:3, ties:0, pf:593.24, pa:574.88, streak:"W1", badge:null },
-  { name:"Bryce-A-Brony",                      manager:"Ed Sumovich",   wins:3, losses:3, ties:0, pf:555.64, pa:650.72, streak:"W1", badge:null },
-  { name:"MTV Gibbs",                          manager:"Mike",          wins:2, losses:4, ties:0, pf:679.18, pa:651.50, streak:"L1", badge:null },
-  { name:"Sepia Rainbow",                      manager:"Andy",          wins:2, losses:4, ties:0, pf:646.32, pa:688.88, streak:"L1", badge:null },
-  { name:"Pfeif's PfistGainz Formula 2.0",     manager:"Eric Pfeifer",  wins:2, losses:4, ties:0, pf:618.48, pa:606.92, streak:"L3", badge:null },
-  { name:"Chasin Jeanty's Panties",            manager:"Mark",          wins:2, losses:4, ties:0, pf:606.66, pa:671.02, streak:"L1", badge:null },
+  { name:"Kaiser's Sozes",                     manager:"Andrew K",      wins:6, losses:1, ties:0, pf:791.40, pa:657.28, streak:"W3", badge:"trophy" },
+  { name:"Flavor of Love 2",                   manager:"Badgerlauncher",wins:5, losses:2, ties:0, pf:786.42, pa:770.60, streak:"W2", badge:null },
+  { name:"Rice-A-Romey",                       manager:"Bryan",         wins:4, losses:3, ties:0, pf:690.36, pa:695.88, streak:"L1", badge:null },
+  { name:"Bryce-A-Brony",                      manager:"Ed Sumovich",   wins:4, losses:3, ties:0, pf:636.06, pa:725.04, streak:"W2", badge:null },
+  { name:"MTV Gibbs",                          manager:"Mike",          wins:3, losses:4, ties:0, pf:790.86, pa:742.50, streak:"W1", badge:null },
+  { name:"Andrew's Ludicrous Team",            manager:"Andrew Balk",   wins:3, losses:4, ties:0, pf:765.54, pa:775.86, streak:"L2", badge:"chain" },
+  { name:"Chasin Jeanty's Panties",            manager:"Mark",          wins:3, losses:4, ties:0, pf:732.34, pa:774.74, streak:"W1", badge:null },
+  { name:"Jim Mora",                           manager:"Levi",          wins:3, losses:4, ties:0, pf:684.24, pa:686.56, streak:"L1", badge:null },
+  { name:"Sepia Rainbow",                      manager:"Andy",          wins:2, losses:5, ties:0, pf:750.44, pa:802.84, streak:"L2", badge:null },
+  { name:"Butker for Senate 2028",             manager:"Eric Pfeifer",  wins:2, losses:5, ties:0, pf:696.98, pa:693.34, streak:"L4", badge:null },
 ];
-const CURRENT_WEEK_LABEL = "SEASON XVI · WEEK 6";
+const CURRENT_WEEK_LABEL = "SEASON XVI · WEEK 7";
 
 // ---- CHAMPIONS_TEAMS: exactly the 4 teams shown on the Champions League page. ----
 const CHAMPIONS_TEAMS = [
-  { name:"Kaiser's Sozes",          manager:"Andrew K",     wins:6, losses:0, ties:0, pf:1411.68, pa:1217.00, streak:"W6", badge:"trophy" },
-  { name:"Cream of Monangai",       manager:"Ed Sumovich",  wins:4, losses:2, ties:0, pf:1406.62, pa:1339.66, streak:"W1", badge:null },
-  { name:"Maybe Win One?",          manager:"Mike",         wins:1, losses:5, ties:0, pf:1274.76, pa:1347.76, streak:"L4", badge:null },
-  { name:"James Warren for Senate", manager:"Eric Pfeifer", wins:1, losses:5, ties:0, pf:1215.10, pa:1403.74, streak:"L1", badge:"suit" },
+  { name:"Kaiser's Sozes",          manager:"Andrew K",     wins:6, losses:1, ties:0, pf:1614.20, pa:1458.86, streak:"L1", badge:"trophy" },
+  { name:"Cream of Monangai",       manager:"Ed Sumovich",  wins:4, losses:3, ties:0, pf:1564.30, pa:1601.36, streak:"L1", badge:null },
+  { name:"Maybe Win One?",          manager:"Mike",         wins:2, losses:5, ties:0, pf:1536.46, pa:1505.44, streak:"W1", badge:null },
+  { name:"James Warren for Senate", manager:"Eric Pfeifer", wins:2, losses:5, ties:0, pf:1456.96, pa:1606.26, streak:"W1", badge:"suit" },
 ];
 
 // ---- AXE_POSITIONS: the 4-week rotation used to build the Axe Position schedule. ----
@@ -2298,7 +2298,8 @@ const AXE_PLAYERS = {
   3: "Devon Achane",
   4: "Justin Herbert",
   5: "Jake Ferguson",
-  6: "DK Metcalf"
+  6: "DK Metcalf",
+  7: "Zach Charbonnet"
 };
 
 function buildAxeSchedule(){
