@@ -2681,11 +2681,26 @@ async function applySavedAdminStories(){
     saved = loadAdminStoriesFromStorage();
   }
   if(!saved.length) return;
-  // saved[0] is the most recently published — unshift from oldest to newest
-  // so the newest ends up at the very front (index 0).
-  for(let i = saved.length - 1; i >= 0; i--){
-    STORIES.unshift(saved[i]);
-  }
+  // Merge published stories in with the built-in ones and order everything
+  // by publish date, newest first. On the same date, built-in stories come
+  // first (so a recap added to the file isn't buried under an older
+  // web-form post); otherwise the existing order is kept.
+  const today = new Date().toISOString().slice(0,10);
+  const builtInIds = new Set(STORIES.map(s=>s.id));
+  const merged = saved.concat(STORIES);
+  const dateOf = s => s.publishedAt || today;
+  const ordered = merged
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => {
+      const da = dateOf(a.s), db = dateOf(b.s);
+      if(da !== db) return da < db ? 1 : -1;
+      const ba = builtInIds.has(a.s.id), bb = builtInIds.has(b.s.id);
+      if(ba !== bb) return ba ? -1 : 1;
+      return a.i - b.i;
+    })
+    .map(x => x.s);
+  STORIES.length = 0;
+  ordered.forEach(s => STORIES.push(s));
   // Whichever story is now at the front becomes the featured/top story.
   STORIES.forEach(s=>{ s.featured = false; });
   STORIES[0].featured = true;
